@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Licorería Pro · Ventas & Inventario</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="main.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/isoWeek.min.js"></script>
+  <script>dayjs.extend(window.dayjs_plugin_isoWeek);</script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">🥃</div>
+      <div>
+        <h1>Licorería Pro</h1>
+        <small>Control profesional de ventas e inventario</small>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button id="btnMode" class="btn ghost">Modo: Trabajador</button>
+      <button id="btnDark" class="btn ghost">🌓</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <img src="https://images.unsplash.com/photo-1504805572947-34fad45aed93?q=80&w=1400&auto=format&fit=crop" alt="licorería" />
+      <div class="hero-text">
+        <h2>Ventas rápidas, stock preciso, reportes premium</h2>
+        <p>Registra por botella, six-pack o caja. Descuentos automáticos de inventario y reportes PDF.</p>
+      </div>
+    </section>
+
+    <section class="grid">
+      <!-- Venta rápida -->
+      <div class="card">
+        <h3>Registrar venta</h3>
+        <form id="saleForm" class="form-grid">
+          <select id="saleProduct"></select>
+          <select id="saleUnit">
+            <option value="unit">Botella/Unidad</option>
+            <option value="pack">Pack / Six-pack</option>
+            <option value="case">Caja</option>
+          </select>
+          <input id="saleQty" type="number" min="1" step="1" value="1" />
+          <input id="salePrice" type="number" step="0.01" placeholder="Precio unitario Bs." />
+          <select id="salePay">
+            <option value="efectivo">Efectivo</option>
+            <option value="qr">QR</option>
+            <option value="tarjeta">Tarjeta</option>
+            <option value="fiado">Fiado</option>
+          </select>
+          <input id="saleClient" placeholder="Cliente (opcional)" />
+          <button class="btn primary" type="submit">Vender</button>
+        </form>
+        <div class="hint">El precio se precarga; puedes modificarlo (promos, descuentos, etc.).</div>
+      </div>
+
+      <!-- Compras / Reposición -->
+      <div class="card">
+        <h3>Reposición de stock</h3>
+        <form id="buyForm" class="form-grid">
+          <input id="buyName" placeholder="Producto (ej: Ron Abuelo 750ml)" required />
+          <input id="buyABV" type="number" step="0.1" placeholder="ABV % (ej: 40)" />
+          <input id="buyVol" type="number" step="10" placeholder="Volumen (ml)" />
+          <input id="buyCost" type="number" step="0.01" placeholder="Costo por unidad (Bs.)" required />
+          <input id="buyPrice" type="number" step="0.01" placeholder="Precio venta unidad (Bs.)" required />
+          <input id="buyPack" type="number" step="1" placeholder="Unidades por pack (ej: 6)" />
+          <input id="buyCase" type="number" step="1" placeholder="Unidades por caja (ej: 12)" />
+          <input id="buyQty" type="number" step="1" placeholder="Cantidad (unidades totales)" required />
+          <button class="btn" type="submit">Registrar compra</button>
+        </form>
+        <div class="hint">Si el producto ya existe, se actualizan precios/costos y se suma al stock.</div>
+      </div>
+
+      <!-- Dashboard -->
+      <div class="card card-wide">
+        <h3>Dashboard</h3>
+        <div class="kpis">
+          <div><strong id="kpiToday">Bs. 0</strong><small>Ventas hoy</small></div>
+          <div><strong id="kpiWeek">Bs. 0</strong><small>Ventas semana</small></div>
+          <div><strong id="kpiMonth">Bs. 0</strong><small>Ventas mes</small></div>
+          <div><strong id="kpiProfit">Bs. 0</strong><small>Utilidad mes</small></div>
+        </div>
+        <div class="charts">
+          <canvas id="chartSales" height="90"></canvas>
+          <canvas id="chartTop" height="90"></canvas>
+        </div>
+      </div>
+
+      <!-- Inventario -->
+      <div class="card">
+        <h3>Inventario</h3>
+        <ul id="invList" class="list"></ul>
+      </div>
+
+      <!-- Catálogo -->
+      <div class="card">
+        <h3>Catálogo</h3>
+        <ul id="prodList" class="list"></ul>
+      </div>
+
+      <!-- Registros -->
+      <div class="card card-wide">
+        <h3>Registros</h3>
+        <div class="filters">
+          <input id="filterText" placeholder="Buscar por nombre/cliente..." />
+          <select id="filterType">
+            <option value="all">Todos</option>
+            <option value="venta">Ventas</option>
+            <option value="compra">Compras</option>
+          </select>
+          <input id="fromDate" type="date" />
+          <input id="toDate" type="date" />
+          <button id="clearFilters" class="btn ghost">Limpiar</button>
+        </div>
+        <ul id="records" class="records"></ul>
+        <div class="actions">
+          <button id="pdfToday" class="btn secondary">PDF Hoy</button>
+          <button id="pdfWeek" class="btn secondary">PDF Semana</button>
+          <button id="pdfMonth" class="btn secondary">PDF Mes</button>
+          <button id="pdfRange" class="btn secondary">PDF Rango</button>
+          <button id="csvExport" class="btn accent">Exportar CSV</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <small>© 2025 Licorería Pro · Control premium para tu negocio</small>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
